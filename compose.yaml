@@ -1,0 +1,26 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg18
+    container_name: bugscope-postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: bugscope
+      POSTGRES_USER: bugscope
+      POSTGRES_PASSWORD: bugscope_dev_password
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - bugscope-postgres-data:/var/lib/postgresql
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bugscope -d bugscope"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  bugscope-postgres-data:
