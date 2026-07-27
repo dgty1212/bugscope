@@ -1,0 +1,36 @@
+# 환경변수 및 비밀키
+.env
+.env.local
+
+# Python 가상환경
+.venv/
+
+# Python 캐시
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# IDE
+.vscode/
+.idea/
+
+# 로그
+*.log
+logs/
+
+# 사용자 업로드 파일
+data/uploads/
+data/repositories/
+
+# 생성된 인덱스와 캐시
+data/cache/
+data/indexes/
+
+# DB 백업
+backups/
+*.dump
+
+# 운영체제 파일
+.DS_Store
+Thumbs.db
