@@ -1,0 +1,22 @@
+[project]
+name = "bugscope"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi[standard]>=0.140.0",
+    "openai>=2.48.0",
+    "pgvector>=0.5.0",
+    "psycopg[binary]>=3.3.4",
+    "pydantic-settings>=2.14.2",
+    "python-multipart>=0.0.32",
+    "sqlalchemy>=2.0.51",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "ruff>=0.16.0",
+]
