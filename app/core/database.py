@@ -5,7 +5,6 @@ from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from app.core.config import get_settings
 
-
 settings = get_settings()
 
 # 애플리케이션 전체에서 하나의 Engine을 재사용한다.
@@ -26,7 +25,6 @@ SessionLocal = sessionmaker(
 class Base(DeclarativeBase):
     """향후 SQLAlchemy 모델이 상속받을 기본 클래스."""
 
-    pass
 
 
 def get_db() -> Generator[Session, None, None]:
