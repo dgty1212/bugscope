@@ -7,9 +7,11 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 import app.models
+from app.api.indexing import router as indexing_router
 from app.api.projects import router as projects_router
-from app.core.database import Base, engine, get_db
 from app.api.source_file import router as source_file_router
+from app.core.database import Base, engine, get_db
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -28,6 +30,7 @@ app = FastAPI(
 
 app.include_router(projects_router)
 app.include_router(source_file_router)
+app.include_router(indexing_router)
 
 DbSession = Annotated[Session, Depends(get_db)]
 

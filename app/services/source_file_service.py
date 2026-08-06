@@ -7,7 +7,6 @@ from sqlalchemy.orm import Session
 
 from app.models.source_file import SourceFile
 
-
 MAX_FILE_SIZE = 1024 * 1024  # 1MB
 ALLOWED_EXTENSIONS = {".java"}
 
