@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from pgvector.sqlalchemy import VECTOR
 from sqlalchemy import (
     DateTime,
     ForeignKey,
@@ -10,6 +11,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.core.constants import EMBEDDING_DIMENSIONS
 from app.core.database import Base
 
 
@@ -87,9 +89,25 @@ class CodeChunk(Base):
         nullable=False,
         index=True,
     )
+    
+    embedding: Mapped[list[float] | None] = mapped_column(
+        VECTOR(EMBEDDING_DIMENSIONS),
+        nullable=True,
+    )
+
+    embedding_model: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+    )
+
+    embedded_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
         server_default=func.now(),
     )
+    

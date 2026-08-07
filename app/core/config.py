@@ -7,6 +7,8 @@ class Settings(BaseSettings):
     """애플리케이션 환경 설정."""
 
     database_url: str
+    openai_api_key: str
+    openai_embedding_model: str = "text-embedding-3-small"
 
     model_config = SettingsConfigDict(
         env_file=".env",
