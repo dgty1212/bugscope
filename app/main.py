@@ -7,6 +7,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 import app.models
+from app.api.analysis import router as analysis_router
 from app.api.indexing import router as indexing_router
 from app.api.projects import router as projects_router
 from app.api.retrieval import router as retrieval_router
@@ -33,6 +34,7 @@ app.include_router(projects_router)
 app.include_router(source_file_router)
 app.include_router(indexing_router)
 app.include_router(retrieval_router)
+app.include_router(analysis_router)
 
 DbSession = Annotated[Session, Depends(get_db)]
 
