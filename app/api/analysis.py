@@ -14,7 +14,8 @@ from app.schemas.analysis import (
     DebugAnalysisResponse,
     RetrievedChunk,
 )
-from app.services import analysis_service, project_service
+from app.services import analysis_service, debug_case_service, project_service
+from app.services.debug_case_service import DebugCaseSaveError
 from app.services.embedding_service import (
     EmbeddingGenerationError,
 )
@@ -111,8 +112,30 @@ def analyze_project_error(
         )
         for hit in result.search_hits
     ]
+    
+    try:
+        debug_case = debug_case_service.create_debug_case(
+            db=db,
+            project_id=project_id,
+            error_log=request.error_log,
+            situation=request.situation,
+            retrieval_query=result.retrieval_query,
+            retrieved_chunks=[
+                chunk.model_dump()
+                for chunk in retrieved_chunks
+            ],
+            analysis_result=(
+                result.analysis.model_dump()
+            ),
+        )
+    except DebugCaseSaveError as error:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="분석 결과 저장에 실패했습니다.",
+        ) from error     
 
     return DebugAnalysisResponse(
+        debug_case_id=debug_case.id,
         project_id=project_id,
         retrieval_query=result.retrieval_query,
         retrieved_chunks=retrieved_chunks,

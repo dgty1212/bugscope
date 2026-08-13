@@ -75,7 +75,9 @@ class DebugAnalysisResult(BaseModel):
 
 class DebugAnalysisResponse(BaseModel):
     """최종 API 응답."""
-
+    
+    debug_case_id: int
+    
     project_id: int
 
     retrieval_query: str
