@@ -76,6 +76,7 @@ def analyze_project_error(
             error_log=request.error_log,
             situation=request.situation,
             top_k=request.top_k,
+            retrieval_mode=request.retrieval_mode,
         )
 
     except NoEmbeddedChunksError as error:
@@ -102,13 +103,14 @@ def analyze_project_error(
     retrieved_chunks = [
         RetrievedChunk(
             chunk_id=hit.code_chunk.id,
-            source_file_id=(
-                hit.code_chunk.source_file_id
-            ),
+            source_file_id=hit.code_chunk.source_file_id,
             file_path=hit.code_chunk.file_path,
             start_line=hit.code_chunk.start_line,
             end_line=hit.code_chunk.end_line,
             similarity=hit.similarity,
+            filename_score=hit.filename_score,
+            keyword_score=hit.keyword_score,
+            hybrid_score=hit.hybrid_score,
         )
         for hit in result.search_hits
     ]

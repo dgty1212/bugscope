@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict, Field
-
+from typing import Literal
 
 class DebugAnalysisRequest(BaseModel):
     """디버깅 분석 요청."""
@@ -19,19 +19,28 @@ class DebugAnalysisRequest(BaseModel):
         ge=1,
         le=10,
     )
+    
+    retrieval_mode: Literal[
+        "vector",
+        "hybrid",
+    ] = "hybrid"
 
 
 class RetrievedChunk(BaseModel):
-    """LLM 분석에 사용된 검색 결과."""
-
     chunk_id: int
     source_file_id: int
 
     file_path: str
+
     start_line: int
     end_line: int
 
     similarity: float
+
+    filename_score: float = 0.0
+    keyword_score: float = 0.0
+
+    hybrid_score: float | None = None
 
 
 class RootCause(BaseModel):

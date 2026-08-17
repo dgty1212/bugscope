@@ -148,6 +148,9 @@ def search_project_code(
             content=hit.code_chunk.content,
             distance=hit.distance,
             similarity=hit.similarity,
+            filename_score=hit.filename_score,
+            keyword_score=hit.keyword_score,
+            hybrid_score=hit.hybrid_score
         )
         for hit in hits
     ]
@@ -155,5 +158,71 @@ def search_project_code(
     return CodeSearchResponse(
         project_id=project_id,
         query=request.query,
+        results=results,
+        retrieval_mode="vector",
+    )
+    
+@router.post(
+    "/search/hybrid",
+    response_model=CodeSearchResponse,
+)
+def search_project_code_hybrid(
+    project_id: int,
+    request: CodeSearchRequest,
+    db: DbSession,
+) -> CodeSearchResponse:
+    """벡터와 명시적 코드 단서를 결합해 검색한다."""
+
+    validate_project_exists(
+        db=db,
+        project_id=project_id,
+    )
+
+    try:
+        hits = (
+            retrieval_service.search_code_chunks_hybrid(
+                db=db,
+                project_id=project_id,
+                query=request.query,
+                top_k=request.top_k,
+            )
+        )
+
+    except NoEmbeddedChunksError as error:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "검색 가능한 임베딩이 없습니다. "
+                "먼저 임베딩 생성을 실행하세요."
+            ),
+        ) from error
+
+    except EmbeddingGenerationError as error:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="검색어 임베딩 생성에 실패했습니다.",
+        ) from error
+
+    results = [
+        CodeSearchResult(
+            chunk_id=hit.code_chunk.id,
+            source_file_id=hit.code_chunk.source_file_id,
+            file_path=hit.code_chunk.file_path,
+            start_line=hit.code_chunk.start_line,
+            end_line=hit.code_chunk.end_line,
+            content=hit.code_chunk.content,
+            distance=hit.distance,
+            similarity=hit.similarity,
+            filename_score=hit.filename_score,
+            keyword_score=hit.keyword_score,
+            hybrid_score=hit.hybrid_score,
+        )
+        for hit in hits
+    ]
+
+    return CodeSearchResponse(
+        project_id=project_id,
+        query=request.query,
+        retrieval_mode="hybrid",
         results=results,
     )

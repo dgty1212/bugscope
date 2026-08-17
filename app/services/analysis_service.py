@@ -120,6 +120,7 @@ def analyze_debug_case(
     error_log: str,
     situation: str | None,
     top_k: int,
+    retrieval_mode: str = "hybrid",
 ) -> DebugAnalysisPipelineResult:
     """검색과 LLM 분석을 연결한 RAG 파이프라인."""
 
@@ -128,14 +129,25 @@ def analyze_debug_case(
         situation=situation,
     )
 
-    search_hits = (
-        retrieval_service.search_code_chunks(
-            db=db,
-            project_id=project_id,
-            query=retrieval_query,
-            top_k=top_k,
+    if retrieval_mode == "hybrid":
+        search_hits = (
+            retrieval_service.search_code_chunks_hybrid(
+                db=db,
+                project_id=project_id,
+                query=retrieval_query,
+                top_k=top_k,
+            )
         )
-    )
+
+    else:
+        search_hits = (
+            retrieval_service.search_code_chunks(
+                db=db,
+                project_id=project_id,
+                query=retrieval_query,
+                top_k=top_k,
+            )
+        )
 
     llm_prompt = build_llm_prompt(
         error_log=error_log,

@@ -52,17 +52,31 @@ class CodeSearchResult(BaseModel):
     source_file_id: int
 
     file_path: str
+
     start_line: int
     end_line: int
+
     content: str
 
     distance: float
+
+    # 순수 embedding cosine similarity
     similarity: float
+
+    # 하이브리드 검색 점수
+    filename_score: float = 0.0
+    keyword_score: float = 0.0
+
+    hybrid_score: float | None = None
 
 
 class CodeSearchResponse(BaseModel):
     """코드 검색 전체 응답."""
 
     project_id: int
+
     query: str
+
+    retrieval_mode: str
+
     results: list[CodeSearchResult]
