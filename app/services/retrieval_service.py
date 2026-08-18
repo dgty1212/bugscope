@@ -205,32 +205,18 @@ def search_code_chunks(
 
     return results
 
-def search_code_chunks_hybrid(
-    db: Session,
-    project_id: int,
+def rerank_search_hits_hybrid(
     query: str,
-    top_k: int = 5,
+    candidates: list[SearchHit],
+    top_k: int,
 ) -> list[SearchHit]:
-    """벡터 검색과 코드 키워드를 결합해 검색한다."""
-
-    # 최종 Top-K보다 더 많은 후보를 먼저 벡터 검색한다.
-    candidate_k = min(
-        max(top_k * 5, 20),
-        100,
-    )
-
-    vector_candidates = search_code_chunks(
-        db=db,
-        project_id=project_id,
-        query=query,
-        top_k=candidate_k,
-    )
+    """기존 벡터 후보들을 Hybrid 점수로 재정렬한다."""
 
     signals = extract_query_signals(query)
 
     hybrid_hits: list[SearchHit] = []
 
-    for candidate in vector_candidates:
+    for candidate in candidates:
         chunk = candidate.code_chunk
 
         lexical_scores = calculate_lexical_scores(
@@ -241,12 +227,8 @@ def search_code_chunks_hybrid(
 
         hybrid_score = calculate_hybrid_score(
             vector_similarity=candidate.similarity,
-            filename_score=(
-                lexical_scores.filename_score
-            ),
-            keyword_score=(
-                lexical_scores.keyword_score
-            ),
+            filename_score=lexical_scores.filename_score,
+            keyword_score=lexical_scores.keyword_score,
         )
 
         hybrid_hits.append(
@@ -254,12 +236,8 @@ def search_code_chunks_hybrid(
                 code_chunk=chunk,
                 distance=candidate.distance,
                 similarity=candidate.similarity,
-                filename_score=(
-                    lexical_scores.filename_score
-                ),
-                keyword_score=(
-                    lexical_scores.keyword_score
-                ),
+                filename_score=lexical_scores.filename_score,
+                keyword_score=lexical_scores.keyword_score,
                 hybrid_score=hybrid_score,
             )
         )
@@ -274,3 +252,30 @@ def search_code_chunks_hybrid(
     )
 
     return hybrid_hits[:top_k]
+
+
+def search_code_chunks_hybrid(
+    db: Session,
+    project_id: int,
+    query: str,
+    top_k: int = 5,
+) -> list[SearchHit]:
+    """벡터 검색 후보를 Hybrid 방식으로 재정렬한다."""
+
+    candidate_k = min(
+        max(top_k * 5, 20),
+        100,
+    )
+
+    vector_candidates = search_code_chunks(
+        db=db,
+        project_id=project_id,
+        query=query,
+        top_k=candidate_k,
+    )
+
+    return rerank_search_hits_hybrid(
+        query=query,
+        candidates=vector_candidates,
+        top_k=top_k,
+    )

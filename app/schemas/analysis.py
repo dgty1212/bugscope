@@ -1,5 +1,7 @@
-from pydantic import BaseModel, ConfigDict, Field
 from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field
+
 
 class DebugAnalysisRequest(BaseModel):
     """디버깅 분석 요청."""
