@@ -67,7 +67,7 @@ def split_source_code(
         )
 
         # 마지막 줄까지 포함했다면 추가 조각을 만들지 않는다.
-        if end_index == total_lines:
+        if end_index >= total_lines:
             break
 
         start_index += step

@@ -33,6 +33,8 @@ def index_project(
 ) -> IndexingResult:
     """프로젝트의 모든 소스 파일을 코드 조각으로 저장한다."""
 
+    print("[INDEX] 1. source file 조회 시작")
+
     source_file_statement = (
         select(SourceFile)
         .where(SourceFile.project_id == project_id)
@@ -43,12 +45,24 @@ def index_project(
         db.scalars(source_file_statement).all()
     )
 
+    print(
+        f"[INDEX] 2. source file 조회 완료: "
+        f"{len(source_files)}개"
+    )
+
     if not source_files:
         raise NoSourceFilesError
 
     code_chunks: list[CodeChunk] = []
 
+    print("[INDEX] 3. chunk 생성 시작")
+
     for source_file in source_files:
+        print(
+            f"[INDEX] chunking: "
+            f"{source_file.file_path}"
+        )
+
         chunk_data_list = split_source_code(
             content=source_file.content,
             max_lines=max_lines,
@@ -72,26 +86,49 @@ def index_project(
                 )
             )
 
+    print(
+        f"[INDEX] 4. chunk 생성 완료: "
+        f"{len(code_chunks)}개"
+    )
+
     try:
-        # 재인덱싱할 때 기존 코드 조각을 먼저 제거한다.
+        print("[INDEX] 5. 기존 chunk 삭제 시작")
+
         db.execute(
             delete(CodeChunk).where(
                 CodeChunk.project_id == project_id
             )
         )
 
+        print("[INDEX] 6. 기존 chunk 삭제 완료")
+
         db.add_all(code_chunks)
+
+        print("[INDEX] 7. 새 chunk flush 시작")
+
+        db.flush()
+
+        print("[INDEX] 8. 새 chunk flush 완료")
+        print("[INDEX] 9. commit 시작")
+
         db.commit()
 
+        print("[INDEX] 10. commit 완료")
+
     except SQLAlchemyError as error:
+        print(
+            f"[INDEX] DB 오류: "
+            f"{type(error).__name__}: {error}"
+        )
+
         db.rollback()
+
         raise ProjectIndexingError from error
 
     return IndexingResult(
         indexed_files=len(source_files),
         created_chunks=len(code_chunks),
     )
-
 
 def get_code_chunks(
     db: Session,

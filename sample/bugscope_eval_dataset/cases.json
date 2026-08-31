@@ -1,0 +1,102 @@
+[
+  {
+    "case_id": 1,
+    "title": "없는 사용자 조회 시 NullPointerException",
+    "difficulty": "easy",
+    "error_log": "java.lang.NullPointerException: Cannot invoke \\\"String.toUpperCase()\\\" because \\\"userName\\\" is null\\n    at com.example.bugscope.sample.UserService.getUserName(UserService.java:16)",
+    "situation": "존재하지 않는 사용자 ID 999를 조회하면 오류가 발생합니다.",
+    "expected_file": "src/main/java/com/example/bugscope/sample/UserService.java",
+    "expected_symbol": "getUserName",
+    "actual_cause": "users.get(userId)가 존재하지 않는 ID에 대해 null을 반환하지만 null 검증 없이 toUpperCase()를 호출한다."
+  },
+  {
+    "case_id": 2,
+    "title": "주문 위치 조회 시 IndexOutOfBoundsException",
+    "difficulty": "easy",
+    "error_log": "java.lang.IndexOutOfBoundsException: Index 3 out of bounds for length 3\\n    at java.base/java.util.ImmutableCollections$ListN.get(ImmutableCollections.java:680)\\n    at com.example.bugscope.sample.OrderService.getOrderByPosition(OrderService.java:13)",
+    "situation": "세 개의 주문만 존재하는데 position=3으로 조회했습니다.",
+    "expected_file": "src/main/java/com/example/bugscope/sample/OrderService.java",
+    "expected_symbol": "getOrderByPosition",
+    "actual_cause": "리스트의 유효 인덱스가 0~2인데 position=3을 검증하지 않고 List.get(position)을 호출한다."
+  },
+  {
+    "case_id": 3,
+    "title": "잘못된 할인율 입력 시 예외",
+    "difficulty": "medium",
+    "error_log": "java.lang.IllegalArgumentException: discountRate must be non-negative",
+    "situation": "상품 가격 할인 계산 중 discountRate=-0.1을 넘겼더니 실패했습니다. PaymentService에서 발생한 것으로 보입니다.",
+    "expected_file": "src/main/java/com/example/bugscope/sample/PaymentService.java",
+    "expected_symbol": "calculateDiscountedPrice",
+    "actual_cause": "calculateDiscountedPrice가 음수 discountRate를 명시적으로 거부하도록 구현되어 있어 IllegalArgumentException이 발생한다."
+  },
+  {
+    "case_id": 4,
+    "title": "worker.count 설정 파싱 실패",
+    "difficulty": "medium",
+    "error_log": "java.lang.NumberFormatException: For input string: \\\"four\\\"\\n    at java.base/java.lang.Integer.parseInt(Integer.java:668)",
+    "situation": "애플리케이션 시작 중 worker.count 설정을 읽는 과정에서 실패합니다.",
+    "expected_file": "src/main/java/com/example/bugscope/sample/ConfigLoader.java",
+    "expected_symbol": "getWorkerCount",
+    "actual_cause": "worker.count 값이 숫자 문자열이 아니라 four인데 Integer.parseInt()로 변환한다."
+  },
+  {
+    "case_id": 5,
+    "title": "재고 삭제 중 ConcurrentModificationException",
+    "difficulty": "medium",
+    "error_log": "java.util.ConcurrentModificationException\\n    at java.base/java.util.ArrayList$Itr.checkForComodification(ArrayList.java:1013)",
+    "situation": "InventoryService에서 특정 문자열이 포함된 재고를 지우는 도중 오류가 발생합니다.",
+    "expected_file": "src/main/java/com/example/bugscope/sample/InventoryService.java",
+    "expected_symbol": "removeItemsContaining",
+    "actual_cause": "향상된 for 문으로 ArrayList를 순회하는 동시에 items.remove(item)으로 같은 리스트를 구조적으로 수정한다."
+  },
+  {
+    "case_id": 6,
+    "title": "존재하지 않는 보고서 파일 읽기 실패",
+    "difficulty": "easy",
+    "error_log": "java.nio.file.NoSuchFileException: reports/monthly.txt\\n    at java.base/sun.nio.fs.UnixException.translateToIOException(UnixException.java:92)",
+    "situation": "FileService.readReport로 monthly.txt를 읽으려 했지만 파일이 없습니다.",
+    "expected_file": "src/main/java/com/example/bugscope/sample/FileService.java",
+    "expected_symbol": "readReport",
+    "actual_cause": "reports/monthly.txt 존재 여부를 확인하지 않고 Files.readString(path)을 호출해 NoSuchFileException이 발생한다."
+  },
+  {
+    "case_id": 7,
+    "title": "짧은 Authorization 헤더 처리 실패",
+    "difficulty": "hard",
+    "error_log": "java.lang.StringIndexOutOfBoundsException: begin 7, end 3, length 3",
+    "situation": "Authorization 헤더 값이 abc인 요청에서 인증 처리 중 오류가 납니다.",
+    "expected_file": "src/main/java/com/example/bugscope/sample/AuthService.java",
+    "expected_symbol": "extractBearerToken",
+    "actual_cause": "헤더가 null인지 또는 Bearer 형식인지 검증하지 않고 무조건 substring(7)을 호출한다."
+  },
+  {
+    "case_id": 8,
+    "title": "평균 계산 시 0으로 나눔",
+    "difficulty": "hard",
+    "error_log": "java.lang.ArithmeticException: / by zero",
+    "situation": "데이터가 한 건도 없는 보고서의 평균을 계산할 때 서버 오류가 발생합니다.",
+    "expected_file": "src/main/java/com/example/bugscope/sample/ReportService.java",
+    "expected_symbol": "calculateAverage",
+    "actual_cause": "count가 0인 경우를 검증하지 않고 정수 total / count 연산을 수행한다."
+  },
+  {
+    "case_id": 9,
+    "title": "날짜 형식 불일치",
+    "difficulty": "hard",
+    "error_log": "java.time.format.DateTimeParseException: Text '24/08/2026' could not be parsed at index 0",
+    "situation": "사용자가 입력한 날짜 24/08/2026을 처리하는 중 실패했습니다.",
+    "expected_file": "src/main/java/com/example/bugscope/sample/DateParserService.java",
+    "expected_symbol": "parseDate",
+    "actual_cause": "DateParserService는 yyyy-MM-dd 형식만 허용하지만 입력값은 dd/MM/yyyy 형식이다."
+  },
+  {
+    "case_id": 10,
+    "title": "프로필 이메일 조회 중 NullPointerException",
+    "difficulty": "hard",
+    "error_log": "java.lang.NullPointerException: Cannot invoke \\\"String.indexOf(String)\\\" because \\\"email\\\" is null",
+    "situation": "등록되지 않은 사용자 프로필의 이메일 도메인을 조회할 때 오류가 발생합니다. 오류 로그에는 파일명이 포함되지 않았습니다.",
+    "expected_file": "src/main/java/com/example/bugscope/sample/ProfileService.java",
+    "expected_symbol": "getEmailDomain",
+    "actual_cause": "emails.get(userId)가 null을 반환할 수 있지만 null 검증 없이 email.indexOf(\\\"@\\\")를 호출한다."
+  }
+]

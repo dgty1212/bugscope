@@ -14,6 +14,7 @@ from app.api.indexing import router as indexing_router
 from app.api.projects import router as projects_router
 from app.api.retrieval import router as retrieval_router
 from app.api.source_file import router as source_file_router
+from app.api.structural import router as structural_router
 from app.core.database import Base, engine, get_db
 
 
@@ -39,6 +40,7 @@ app.include_router(retrieval_router)
 app.include_router(analysis_router)
 app.include_router(debug_cases_router)
 app.include_router(evaluation_router)
+app.include_router(structural_router)
 
 DbSession = Annotated[Session, Depends(get_db)]
 
