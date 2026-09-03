@@ -25,7 +25,8 @@ class DebugAnalysisRequest(BaseModel):
     retrieval_mode: Literal[
         "vector",
         "hybrid",
-    ] = "hybrid"
+        "structural",
+    ] = "structural"
 
 
 class RetrievedChunk(BaseModel):
@@ -58,7 +59,7 @@ class RootCause(BaseModel):
 
     reason: str
 
-    evidence_chunk_ids: list[int]
+    evidence_context_ids: list[int]
 
     confidence: float = Field(
         ge=0.0,
@@ -83,16 +84,43 @@ class DebugAnalysisResult(BaseModel):
 
     additional_information_needed: list[str]
 
+    
+class AnalysisContext(BaseModel):
+    context_id: int
 
+    context_type: Literal[
+        "trace",
+        "callee",
+        "caller",
+        "semantic",
+    ]
+
+    source_type: Literal[
+        "symbol",
+        "chunk",
+    ]
+
+    source_id: int
+
+    file_path: str
+
+    class_name: str | None = None
+    symbol_name: str | None = None
+
+    start_line: int
+    end_line: int
+
+    score: float | None = None
+    
 class DebugAnalysisResponse(BaseModel):
-    """최종 API 응답."""
-    
     debug_case_id: int
-    
+
     project_id: int
 
+    retrieval_mode: str
     retrieval_query: str
 
-    retrieved_chunks: list[RetrievedChunk]
+    contexts: list[AnalysisContext]
 
     analysis: DebugAnalysisResult
+    

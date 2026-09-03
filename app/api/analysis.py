@@ -10,11 +10,16 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.schemas.analysis import (
+    AnalysisContext,
     DebugAnalysisRequest,
     DebugAnalysisResponse,
-    RetrievedChunk,
 )
-from app.services import analysis_service, debug_case_service, project_service
+from app.services import (
+    analysis_service,
+    debug_case_service,
+    project_service,
+)
+from app.services.context_selector import SelectedContext
 from app.services.debug_case_service import DebugCaseSaveError
 from app.services.embedding_service import (
     EmbeddingGenerationError,
@@ -51,6 +56,56 @@ def validate_project_exists(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="프로젝트를 찾을 수 없습니다.",
         )
+
+
+def build_analysis_contexts(
+    contexts: list[SelectedContext],
+) -> list[AnalysisContext]:
+    """SelectedContext를 API 응답 Schema로 변환한다."""
+
+    return [
+        AnalysisContext(
+            context_id=context_id,
+            context_type=context.context_type,
+            source_type=context.source_type,
+            source_id=context.source_id,
+            file_path=context.file_path,
+            class_name=context.class_name,
+            symbol_name=context.symbol_name,
+            start_line=context.start_line,
+            end_line=context.end_line,
+            score=context.score,
+        )
+        for context_id, context in enumerate(
+            contexts,
+            start=1,
+        )
+    ]
+
+
+def serialize_contexts(
+    contexts: list[SelectedContext],
+) -> list[dict]:
+    """DebugCase JSONB 저장용 Context 데이터."""
+
+    return [
+        {
+            "context_id": context_id,
+            "context_type": context.context_type,
+            "source_type": context.source_type,
+            "source_id": context.source_id,
+            "file_path": context.file_path,
+            "class_name": context.class_name,
+            "symbol_name": context.symbol_name,
+            "start_line": context.start_line,
+            "end_line": context.end_line,
+            "score": context.score,
+        }
+        for context_id, context in enumerate(
+            contexts,
+            start=1,
+        )
+    ]
 
 
 @router.post(
@@ -100,21 +155,14 @@ def analyze_project_error(
             detail="LLM 오류 분석에 실패했습니다.",
         ) from error
 
-    retrieved_chunks = [
-        RetrievedChunk(
-            chunk_id=hit.code_chunk.id,
-            source_file_id=hit.code_chunk.source_file_id,
-            file_path=hit.code_chunk.file_path,
-            start_line=hit.code_chunk.start_line,
-            end_line=hit.code_chunk.end_line,
-            similarity=hit.similarity,
-            filename_score=hit.filename_score,
-            keyword_score=hit.keyword_score,
-            hybrid_score=hit.hybrid_score,
-        )
-        for hit in result.search_hits
-    ]
-    
+    analysis_contexts = build_analysis_contexts(
+        result.contexts,
+    )
+
+    stored_contexts = serialize_contexts(
+        result.contexts,
+    )
+
     try:
         debug_case = debug_case_service.create_debug_case(
             db=db,
@@ -122,24 +170,25 @@ def analyze_project_error(
             error_log=request.error_log,
             situation=request.situation,
             retrieval_query=result.retrieval_query,
-            retrieved_chunks=[
-                chunk.model_dump()
-                for chunk in retrieved_chunks
-            ],
-            analysis_result=(
-                result.analysis.model_dump()
-            ),
+
+            # DB 컬럼 이름은 아직 retrieved_chunks이지만,
+            # 내부에는 이제 selected context metadata를 저장한다.
+            retrieved_chunks=stored_contexts,
+
+            analysis_result=result.analysis.model_dump(),
         )
+
     except DebugCaseSaveError as error:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="분석 결과 저장에 실패했습니다.",
-        ) from error     
+        ) from error
 
     return DebugAnalysisResponse(
         debug_case_id=debug_case.id,
         project_id=project_id,
+        retrieval_mode=request.retrieval_mode,
         retrieval_query=result.retrieval_query,
-        retrieved_chunks=retrieved_chunks,
+        contexts=analysis_contexts,
         analysis=result.analysis,
     )
