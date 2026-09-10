@@ -1,6 +1,18 @@
 from pydantic import BaseModel, Field
 
+class StructuralUsageMetricsResponse(BaseModel):
+    total_cases: int
 
+    trace_cases: int
+    caller_cases: int
+    callee_cases: int
+    semantic_only_cases: int
+
+    trace_rate: float
+    caller_rate: float
+    callee_rate: float
+    semantic_only_rate: float
+    
 class RetrievalModeMetricsResponse(BaseModel):
     evaluated_cases: int
     symbol_cases: int
@@ -33,6 +45,9 @@ class ComparativeCaseEvaluationResponse(
     hybrid_symbol_rank: int | None
     structural_symbol_rank: int | None
     
+    structural_context_types: list[str]
+    structural_context_details: list[str]
+    
 class ComparativeRetrievalEvaluationResponse(BaseModel):
     project_id: int
     evaluated_cases: int
@@ -44,6 +59,9 @@ class ComparativeRetrievalEvaluationResponse(BaseModel):
     cases: list[
         ComparativeCaseEvaluationResponse
     ]
+    
+    structural_usage: StructuralUsageMetricsResponse    
+
 
 class RetrievalEvaluationRequest(BaseModel):
     """검색 성능 평가 요청."""
@@ -88,3 +106,4 @@ class RetrievalEvaluationResponse(BaseModel):
     hybrid: RetrievalMetrics
 
     cases: list[RetrievalCaseResult]
+    

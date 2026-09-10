@@ -80,7 +80,20 @@ def normalize_file_path(
 
     return normalized
 
+@dataclass(frozen=True, slots=True)
+class StructuralUsageMetrics:
+    total_cases: int
 
+    trace_cases: int
+    caller_cases: int
+    callee_cases: int
+    semantic_only_cases: int
+
+    trace_rate: float
+    caller_rate: float
+    callee_rate: float
+    semantic_only_rate: float
+    
 def file_matches_expected(
     actual_file: str,
     expected_file: str,
@@ -294,7 +307,62 @@ class ComparativeCaseEvaluation:
     hybrid_symbol_rank: int | None
     structural_symbol_rank: int | None
 
+    structural_context_types: list[str]
+    structural_context_details: list[str]
 
+def calculate_structural_usage(
+    cases: list[ComparativeCaseEvaluation],
+) -> StructuralUsageMetrics:
+    total = len(cases)
+
+    if total == 0:
+        return StructuralUsageMetrics(
+            total_cases=0,
+            trace_cases=0,
+            caller_cases=0,
+            callee_cases=0,
+            semantic_only_cases=0,
+            trace_rate=0.0,
+            caller_rate=0.0,
+            callee_rate=0.0,
+            semantic_only_rate=0.0,
+        )
+
+    trace_cases = sum(
+        "trace" in case.structural_context_types
+        for case in cases
+    )
+
+    caller_cases = sum(
+        "caller" in case.structural_context_types
+        for case in cases
+    )
+
+    callee_cases = sum(
+        "callee" in case.structural_context_types
+        for case in cases
+    )
+
+    semantic_only_cases = sum(
+        set(case.structural_context_types)
+        == {"semantic"}
+        for case in cases
+    )
+
+    return StructuralUsageMetrics(
+        total_cases=total,
+        trace_cases=trace_cases,
+        caller_cases=caller_cases,
+        callee_cases=callee_cases,
+        semantic_only_cases=semantic_only_cases,
+        trace_rate=trace_cases / total,
+        caller_rate=caller_cases / total,
+        callee_rate=callee_cases / total,
+        semantic_only_rate=(
+            semantic_only_cases / total
+        ),
+    )
+    
 @dataclass(frozen=True, slots=True)
 class ComparativeRetrievalEvaluation:
     project_id: int
@@ -305,6 +373,7 @@ class ComparativeRetrievalEvaluation:
     structural: RetrievalModeMetrics
 
     cases: list[ComparativeCaseEvaluation]
+    structural_usage: StructuralUsageMetrics
 
 @dataclass(frozen=True, slots=True)
 class CaseRetrievalEvaluation:
@@ -313,8 +382,9 @@ class CaseRetrievalEvaluation:
 
     has_expected_symbol: bool
 
-    context_count: int
+    context_count: int    
 
+    
 def evaluate_contexts(
     contexts: list[SelectedContext],
     expected_file: str,
@@ -625,15 +695,13 @@ def evaluate_project_retrieval_modes(
                 debug_case_id=debug_case.id,
                 expected_file=expected_file,
                 expected_symbol=expected_symbol,
-                vector_file_rank=(
-                    vector_result.file_rank
-                ),
-                hybrid_file_rank=(
-                    hybrid_result.file_rank
-                ),
+
+                vector_file_rank=vector_result.file_rank,
+                hybrid_file_rank=hybrid_result.file_rank,
                 structural_file_rank=(
                     structural_result.file_rank
                 ),
+
                 vector_symbol_rank=(
                     vector_result.symbol_rank
                 ),
@@ -643,6 +711,20 @@ def evaluate_project_retrieval_modes(
                 structural_symbol_rank=(
                     structural_result.symbol_rank
                 ),
+
+                structural_context_types=[
+                    context.context_type
+                    for context in structural_contexts
+                ],
+
+                structural_context_details=[
+                    (
+                        f"{context.context_type}:"
+                        f"{context.file_path}:"
+                        f"{context.symbol_name or '-'}"
+                    )
+                    for context in structural_contexts
+                ],
             )
         )
 
@@ -657,6 +739,9 @@ def evaluate_project_retrieval_modes(
         ),
         structural=calculate_mode_metrics(
             structural_results
+        ),
+        structural_usage=calculate_structural_usage(
+            comparative_cases
         ),
         cases=comparative_cases,
     )

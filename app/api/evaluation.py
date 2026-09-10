@@ -18,6 +18,7 @@ from app.schemas.evaluation import (
     RetrievalEvaluationResponse,
     RetrievalMetrics,
     RetrievalModeMetricsResponse,
+    StructuralUsageMetricsResponse,
 )
 from app.services import (
     evaluation_service,
@@ -163,7 +164,20 @@ def build_metrics_response(
         symbol_mrr=metrics.symbol_mrr,
         average_context_count=metrics.average_context_count,
     )
-
+def build_structural_usage_response(
+    usage: evaluation_service.StructuralUsageMetrics,
+) -> StructuralUsageMetricsResponse:
+    return StructuralUsageMetricsResponse(
+        total_cases=usage.total_cases,
+        trace_cases=usage.trace_cases,
+        caller_cases=usage.caller_cases,
+        callee_cases=usage.callee_cases,
+        semantic_only_cases=usage.semantic_only_cases,
+        trace_rate=usage.trace_rate,
+        caller_rate=usage.caller_rate,
+        callee_rate=usage.callee_rate,
+        semantic_only_rate=usage.semantic_only_rate,
+    )
 
 @router.post(
     "/retrieval/compare",
@@ -194,6 +208,9 @@ def compare_retrieval_modes(
         structural=build_metrics_response(
             result.structural
         ),
+        structural_usage=build_structural_usage_response(
+            result.structural_usage
+        ),
         cases=[
             ComparativeCaseEvaluationResponse(
                 debug_case_id=case.debug_case_id,
@@ -212,6 +229,12 @@ def compare_retrieval_modes(
                 ),
                 structural_symbol_rank=(
                     case.structural_symbol_rank
+                ),
+                structural_context_types=(
+                    case.structural_context_types
+                ),
+                structural_context_details=(
+                    case.structural_context_details
                 ),
             )
             for case in result.cases
