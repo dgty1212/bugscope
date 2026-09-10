@@ -10,10 +10,14 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.schemas.evaluation import (
+    ComparativeRetrievalEvaluationResponse,
+    ComparativeCaseEvaluationResponse,
+    RetrievalModeMetricsResponse,
     RetrievalCaseResult,
     RetrievalEvaluationRequest,
     RetrievalEvaluationResponse,
     RetrievalMetrics,
+    RetrievalModeMetricsResponse,
 )
 from app.services import (
     evaluation_service,
@@ -138,6 +142,77 @@ def evaluate_project_retrieval(
                 expected_file=case.expected_file,
                 vector_rank=case.vector_rank,
                 hybrid_rank=case.hybrid_rank,
+            )
+            for case in result.cases
+        ],
+    )
+    
+def build_metrics_response(
+    metrics: evaluation_service.RetrievalModeMetrics,
+) -> RetrievalModeMetricsResponse:
+    return RetrievalModeMetricsResponse(
+        evaluated_cases=metrics.evaluated_cases,
+        symbol_cases=metrics.symbol_cases,
+        file_top1=metrics.file_top1,
+        file_top3=metrics.file_top3,
+        file_top5=metrics.file_top5,
+        file_mrr=metrics.file_mrr,
+        symbol_top1=metrics.symbol_top1,
+        symbol_top3=metrics.symbol_top3,
+        symbol_top5=metrics.symbol_top5,
+        symbol_mrr=metrics.symbol_mrr,
+        average_context_count=metrics.average_context_count,
+    )
+
+
+@router.post(
+    "/retrieval/compare",
+    response_model=ComparativeRetrievalEvaluationResponse,
+)
+def compare_retrieval_modes(
+    project_id: int,
+    db: DbSession,
+) -> ComparativeRetrievalEvaluationResponse:
+    result = (
+        evaluation_service
+        .evaluate_project_retrieval_modes(
+            db=db,
+            project_id=project_id,
+            top_k=5,
+        )
+    )
+
+    return ComparativeRetrievalEvaluationResponse(
+        project_id=result.project_id,
+        evaluated_cases=result.evaluated_cases,
+        vector=build_metrics_response(
+            result.vector
+        ),
+        hybrid=build_metrics_response(
+            result.hybrid
+        ),
+        structural=build_metrics_response(
+            result.structural
+        ),
+        cases=[
+            ComparativeCaseEvaluationResponse(
+                debug_case_id=case.debug_case_id,
+                expected_file=case.expected_file,
+                expected_symbol=case.expected_symbol,
+                vector_file_rank=case.vector_file_rank,
+                hybrid_file_rank=case.hybrid_file_rank,
+                structural_file_rank=(
+                    case.structural_file_rank
+                ),
+                vector_symbol_rank=(
+                    case.vector_symbol_rank
+                ),
+                hybrid_symbol_rank=(
+                    case.hybrid_symbol_rank
+                ),
+                structural_symbol_rank=(
+                    case.structural_symbol_rank
+                ),
             )
             for case in result.cases
         ],

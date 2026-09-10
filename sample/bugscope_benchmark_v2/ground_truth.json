@@ -1,0 +1,10 @@
+[
+  {
+    "name": "user_not_found_npe",
+    "error_log": "java.lang.NullPointerException: userName is null\n    at com.example.bugscope.benchmark.users.UserService.getUserName(UserService.java:16)\n    at com.example.bugscope.benchmark.users.UserController.getUser(UserController.java:7)",
+    "expected_file": "src/main/java/com/example/bugscope/benchmark/users/UserService.java",
+    "expected_symbol": "getUserName",
+    "actual_cause": "존재하지 않는 userId의 조회 결과가 null인데 toUpperCase()를 호출함"
+  }
+
+]

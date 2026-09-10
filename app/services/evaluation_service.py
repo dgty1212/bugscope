@@ -6,7 +6,19 @@ from sqlalchemy.orm import Session
 from app.models.debug_case import DebugCase
 from app.services import retrieval_service
 from app.services.analysis_service import build_retrieval_query
+from app.services.context_selector import (
+    SelectedContext,
+    search_hits_to_contexts,
+    select_debug_context,
+)
 from app.services.retrieval_service import SearchHit
+from app.services.structural_evaluation_service import (
+    file_matches,
+    find_rank,
+    hit_at_k,
+    reciprocal_rank,
+    symbol_matches,
+)
 
 TOP_K_VALUES = (1, 3, 5)
 
@@ -246,4 +258,405 @@ def evaluate_retrieval(
             hybrid_ranks
         ),
         cases=case_results,
+    )
+@dataclass(frozen=True, slots=True)
+class RetrievalModeMetrics:
+    """하나의 Retrieval 방식에 대한 평가 결과."""
+
+    evaluated_cases: int
+    symbol_cases: int
+
+    file_top1: float
+    file_top3: float
+    file_top5: float
+    file_mrr: float
+
+    symbol_top1: float | None
+    symbol_top3: float | None
+    symbol_top5: float | None
+    symbol_mrr: float | None
+
+    average_context_count: float
+
+
+@dataclass(frozen=True, slots=True)
+class ComparativeCaseEvaluation:
+    debug_case_id: int
+
+    expected_file: str
+    expected_symbol: str | None
+
+    vector_file_rank: int | None
+    hybrid_file_rank: int | None
+    structural_file_rank: int | None
+
+    vector_symbol_rank: int | None
+    hybrid_symbol_rank: int | None
+    structural_symbol_rank: int | None
+
+
+@dataclass(frozen=True, slots=True)
+class ComparativeRetrievalEvaluation:
+    project_id: int
+    evaluated_cases: int
+
+    vector: RetrievalModeMetrics
+    hybrid: RetrievalModeMetrics
+    structural: RetrievalModeMetrics
+
+    cases: list[ComparativeCaseEvaluation]
+
+@dataclass(frozen=True, slots=True)
+class CaseRetrievalEvaluation:
+    file_rank: int | None
+    symbol_rank: int | None
+
+    has_expected_symbol: bool
+
+    context_count: int
+
+def evaluate_contexts(
+    contexts: list[SelectedContext],
+    expected_file: str,
+    expected_symbol: str | None,
+) -> CaseRetrievalEvaluation:
+    """선별된 Context에서 정답 파일/심볼의 순위를 계산한다."""
+
+    file_rank = find_rank(
+        contexts,
+        lambda context: file_matches(
+            context,
+            expected_file,
+        ),
+    )
+
+    symbol_rank: int | None = None
+
+    if expected_symbol:
+        symbol_rank = find_rank(
+            contexts,
+            lambda context: (
+                file_matches(
+                    context,
+                    expected_file,
+                )
+                and symbol_matches(
+                    context,
+                    expected_symbol,
+                )
+            ),
+        )
+
+    return CaseRetrievalEvaluation(
+        file_rank=file_rank,
+        symbol_rank=symbol_rank,
+        has_expected_symbol=bool(expected_symbol),
+        context_count=len(contexts),
+    )
+    
+def retrieve_evaluation_contexts(
+    db: Session,
+    debug_case: DebugCase,
+    retrieval_mode: str,
+    top_k: int,
+) -> list[SelectedContext]:
+    """평가용 Retrieval Context를 생성한다."""
+
+    retrieval_query = build_retrieval_query(
+        error_log=debug_case.error_log,
+        situation=debug_case.situation,
+    )
+
+    if retrieval_mode == "vector":
+        hits = retrieval_service.search_code_chunks(
+            db=db,
+            project_id=debug_case.project_id,
+            query=retrieval_query,
+            top_k=top_k,
+        )
+
+        return search_hits_to_contexts(
+            hits,
+        )
+
+    if retrieval_mode == "hybrid":
+        hits = retrieval_service.search_code_chunks_hybrid(
+            db=db,
+            project_id=debug_case.project_id,
+            query=retrieval_query,
+            top_k=top_k,
+        )
+
+        return search_hits_to_contexts(
+            hits,
+        )
+
+    if retrieval_mode == "structural":
+        return select_debug_context(
+            db=db,
+            project_id=debug_case.project_id,
+            error_log=debug_case.error_log,
+            retrieval_query=retrieval_query,
+            max_contexts=top_k,
+        )
+
+    raise ValueError(
+        f"지원하지 않는 retrieval_mode입니다: "
+        f"{retrieval_mode}"
+    )
+
+def calculate_mode_metrics(
+    results: list[CaseRetrievalEvaluation],
+) -> RetrievalModeMetrics:
+    """여러 Debug Case 결과를 하나의 Metric으로 집계한다."""
+
+    case_count = len(results)
+
+    if case_count == 0:
+        return RetrievalModeMetrics(
+            evaluated_cases=0,
+            symbol_cases=0,
+            file_top1=0.0,
+            file_top3=0.0,
+            file_top5=0.0,
+            file_mrr=0.0,
+            symbol_top1=None,
+            symbol_top3=None,
+            symbol_top5=None,
+            symbol_mrr=None,
+            average_context_count=0.0,
+        )
+
+    file_top1 = sum(
+        hit_at_k(result.file_rank, 1)
+        for result in results
+    ) / case_count
+
+    file_top3 = sum(
+        hit_at_k(result.file_rank, 3)
+        for result in results
+    ) / case_count
+
+    file_top5 = sum(
+        hit_at_k(result.file_rank, 5)
+        for result in results
+    ) / case_count
+
+    file_mrr = sum(
+        reciprocal_rank(result.file_rank)
+        for result in results
+    ) / case_count
+
+    average_context_count = sum(
+        result.context_count
+        for result in results
+    ) / case_count
+
+    # expected_symbol이 존재하는 Case만
+    # Symbol 평가 대상에 포함한다.
+    symbol_results = [
+        result
+        for result in results
+        if result.has_expected_symbol
+    ]
+
+    symbol_case_count = len(symbol_results)
+
+    if symbol_case_count == 0:
+        symbol_top1 = None
+        symbol_top3 = None
+        symbol_top5 = None
+        symbol_mrr = None
+
+    else:
+        symbol_top1 = sum(
+            hit_at_k(result.symbol_rank, 1)
+            for result in symbol_results
+        ) / symbol_case_count
+
+        symbol_top3 = sum(
+            hit_at_k(result.symbol_rank, 3)
+            for result in symbol_results
+        ) / symbol_case_count
+
+        symbol_top5 = sum(
+            hit_at_k(result.symbol_rank, 5)
+            for result in symbol_results
+        ) / symbol_case_count
+
+        symbol_mrr = sum(
+            reciprocal_rank(result.symbol_rank)
+            for result in symbol_results
+        ) / symbol_case_count
+
+    return RetrievalModeMetrics(
+        evaluated_cases=case_count,
+        symbol_cases=symbol_case_count,
+        file_top1=file_top1,
+        file_top3=file_top3,
+        file_top5=file_top5,
+        file_mrr=file_mrr,
+        symbol_top1=symbol_top1,
+        symbol_top3=symbol_top3,
+        symbol_top5=symbol_top5,
+        symbol_mrr=symbol_mrr,
+        average_context_count=average_context_count,
+    )
+    
+def evaluate_project_retrieval_modes(
+    db: Session,
+    project_id: int,
+    top_k: int = 5,
+) -> ComparativeRetrievalEvaluation:
+    """
+    Ground Truth가 등록된 DebugCase를 이용해
+    Vector / Hybrid / Structural Retrieval을 비교한다.
+    """
+
+    statement = (
+        select(DebugCase)
+        .where(
+            DebugCase.project_id == project_id,
+            DebugCase.resolved.is_(True),
+            DebugCase.expected_file.is_not(None),
+        )
+        .order_by(DebugCase.id)
+    )
+
+    debug_cases = list(
+        db.scalars(statement).all()
+    )
+
+    vector_results: list[
+        CaseRetrievalEvaluation
+    ] = []
+
+    hybrid_results: list[
+        CaseRetrievalEvaluation
+    ] = []
+
+    structural_results: list[
+        CaseRetrievalEvaluation
+    ] = []
+    
+    comparative_cases: list[
+        ComparativeCaseEvaluation
+    ] = []
+
+    for debug_case in debug_cases:
+        expected_file = debug_case.expected_file
+
+        if not expected_file:
+            continue
+
+        expected_symbol = (
+            debug_case.expected_symbol
+        )
+
+        # ----------------------------
+        # Vector
+        # ----------------------------
+        vector_contexts = (
+            retrieve_evaluation_contexts(
+                db=db,
+                debug_case=debug_case,
+                retrieval_mode="vector",
+                top_k=top_k,
+            )
+        )
+
+        vector_result = evaluate_contexts(
+            contexts=vector_contexts,
+            expected_file=expected_file,
+            expected_symbol=expected_symbol,
+        )
+
+
+        # ----------------------------
+        # Hybrid
+        # ----------------------------
+        hybrid_contexts = (
+            retrieve_evaluation_contexts(
+                db=db,
+                debug_case=debug_case,
+                retrieval_mode="hybrid",
+                top_k=top_k,
+            )
+        )
+
+        hybrid_result = evaluate_contexts(
+            contexts=hybrid_contexts,
+            expected_file=expected_file,
+            expected_symbol=expected_symbol,
+        )
+
+        # ----------------------------
+        # Structural
+        # ----------------------------
+        structural_contexts = (
+            retrieve_evaluation_contexts(
+                db=db,
+                debug_case=debug_case,
+                retrieval_mode="structural",
+                top_k=top_k,
+            )
+        )
+
+        structural_result = evaluate_contexts(
+            contexts=structural_contexts,
+            expected_file=expected_file,
+            expected_symbol=expected_symbol,
+        )
+        
+        vector_results.append(
+            vector_result
+        )
+
+        hybrid_results.append(
+            hybrid_result
+        )
+
+        structural_results.append(
+            structural_result
+        )
+        
+        comparative_cases.append(
+            ComparativeCaseEvaluation(
+                debug_case_id=debug_case.id,
+                expected_file=expected_file,
+                expected_symbol=expected_symbol,
+                vector_file_rank=(
+                    vector_result.file_rank
+                ),
+                hybrid_file_rank=(
+                    hybrid_result.file_rank
+                ),
+                structural_file_rank=(
+                    structural_result.file_rank
+                ),
+                vector_symbol_rank=(
+                    vector_result.symbol_rank
+                ),
+                hybrid_symbol_rank=(
+                    hybrid_result.symbol_rank
+                ),
+                structural_symbol_rank=(
+                    structural_result.symbol_rank
+                ),
+            )
+        )
+
+    return ComparativeRetrievalEvaluation(
+        project_id=project_id,
+        evaluated_cases=len(vector_results),
+        vector=calculate_mode_metrics(
+            vector_results
+        ),
+        hybrid=calculate_mode_metrics(
+            hybrid_results
+        ),
+        structural=calculate_mode_metrics(
+            structural_results
+        ),
+        cases=comparative_cases,
     )

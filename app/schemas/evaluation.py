@@ -1,6 +1,50 @@
 from pydantic import BaseModel, Field
 
 
+class RetrievalModeMetricsResponse(BaseModel):
+    evaluated_cases: int
+    symbol_cases: int
+
+    file_top1: float
+    file_top3: float
+    file_top5: float
+    file_mrr: float
+
+    symbol_top1: float | None
+    symbol_top3: float | None
+    symbol_top5: float | None
+    symbol_mrr: float | None
+
+    average_context_count: float    
+    
+class ComparativeCaseEvaluationResponse(
+    BaseModel
+):
+    debug_case_id: int
+
+    expected_file: str
+    expected_symbol: str | None
+
+    vector_file_rank: int | None
+    hybrid_file_rank: int | None
+    structural_file_rank: int | None
+
+    vector_symbol_rank: int | None
+    hybrid_symbol_rank: int | None
+    structural_symbol_rank: int | None
+    
+class ComparativeRetrievalEvaluationResponse(BaseModel):
+    project_id: int
+    evaluated_cases: int
+
+    vector: RetrievalModeMetricsResponse
+    hybrid: RetrievalModeMetricsResponse
+    structural: RetrievalModeMetricsResponse
+    
+    cases: list[
+        ComparativeCaseEvaluationResponse
+    ]
+
 class RetrievalEvaluationRequest(BaseModel):
     """검색 성능 평가 요청."""
 
