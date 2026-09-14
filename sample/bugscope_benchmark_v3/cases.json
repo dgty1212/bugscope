@@ -1,0 +1,287 @@
+[
+  {
+    "case_id": "v3-01",
+    "difficulty": "hard",
+    "category": "direct_callee",
+    "title": "Boundary contract 01",
+    "error_log": "java.lang.IllegalStateException: result contract violated\n\tat com.example.bugscope.benchmark.v3.AlderGate.execute(AlderGate.java:9)",
+    "situation": "입력 \"abc\", 기대 결과 3. 경계의 결과 검증이 실패했습니다.",
+    "expected_file": "src/main/java/com/example/bugscope/benchmark/v3/CedarUnit.java",
+    "expected_symbol": "transform",
+    "actual_cause": "문자 수를 하나 적게 반환한다.",
+    "expected_hops": 1,
+    "graph_path": [
+      "AlderGate.execute",
+      "CedarUnit.transform"
+    ],
+    "decoy_files": [
+      "src/main/java/com/example/bugscope/benchmark/v3/CedarUnitReplica.java",
+      "src/main/java/com/example/bugscope/benchmark/v3/CedarUnitShadow.java"
+    ],
+    "invocation": "new AlderGate().execute(\"abc\", 3)"
+  },
+  {
+    "case_id": "v3-02",
+    "difficulty": "hard",
+    "category": "direct_callee",
+    "title": "Boundary contract 02",
+    "error_log": "java.lang.IllegalStateException: result contract violated\n\tat com.example.bugscope.benchmark.v3.DuneGate.execute(DuneGate.java:9)",
+    "situation": "입력 \"19\", 기대 결과 19. 경계의 결과 검증이 실패했습니다.",
+    "expected_file": "src/main/java/com/example/bugscope/benchmark/v3/FlintUnit.java",
+    "expected_symbol": "transform",
+    "actual_cause": "첫 글자만 변환하여 뒷자리를 잃는다.",
+    "expected_hops": 1,
+    "graph_path": [
+      "DuneGate.execute",
+      "FlintUnit.transform"
+    ],
+    "decoy_files": [
+      "src/main/java/com/example/bugscope/benchmark/v3/FlintUnitReplica.java",
+      "src/main/java/com/example/bugscope/benchmark/v3/FlintUnitShadow.java"
+    ],
+    "invocation": "new DuneGate().execute(\"19\", 19)"
+  },
+  {
+    "case_id": "v3-03",
+    "difficulty": "hard",
+    "category": "direct_callee",
+    "title": "Boundary contract 03",
+    "error_log": "java.lang.IllegalStateException: result contract violated\n\tat com.example.bugscope.benchmark.v3.GroveGate.execute(GroveGate.java:9)",
+    "situation": "입력 \"255\", 기대 결과 255. 경계의 결과 검증이 실패했습니다.",
+    "expected_file": "src/main/java/com/example/bugscope/benchmark/v3/IrisUnit.java",
+    "expected_symbol": "transform",
+    "actual_cause": "signed byte 변환으로 양수가 음수가 된다.",
+    "expected_hops": 1,
+    "graph_path": [
+      "GroveGate.execute",
+      "IrisUnit.transform"
+    ],
+    "decoy_files": [
+      "src/main/java/com/example/bugscope/benchmark/v3/IrisUnitReplica.java",
+      "src/main/java/com/example/bugscope/benchmark/v3/IrisUnitShadow.java"
+    ],
+    "invocation": "new GroveGate().execute(\"255\", 255)"
+  },
+  {
+    "case_id": "v3-04",
+    "difficulty": "hard",
+    "category": "direct_callee",
+    "title": "Boundary contract 04",
+    "error_log": "java.lang.IllegalStateException: result contract violated\n\tat com.example.bugscope.benchmark.v3.JadeGate.execute(JadeGate.java:9)",
+    "situation": "입력 \"199\", 기대 결과 2. 경계의 결과 검증이 실패했습니다.",
+    "expected_file": "src/main/java/com/example/bugscope/benchmark/v3/LarchUnit.java",
+    "expected_symbol": "transform",
+    "actual_cause": "올림해야 하는 묶음 수를 정수 나눗셈으로 버린다.",
+    "expected_hops": 1,
+    "graph_path": [
+      "JadeGate.execute",
+      "LarchUnit.transform"
+    ],
+    "decoy_files": [
+      "src/main/java/com/example/bugscope/benchmark/v3/LarchUnitReplica.java",
+      "src/main/java/com/example/bugscope/benchmark/v3/LarchUnitShadow.java"
+    ],
+    "invocation": "new JadeGate().execute(\"199\", 2)"
+  },
+  {
+    "case_id": "v3-05",
+    "difficulty": "hard",
+    "category": "direct_callee",
+    "title": "Boundary contract 05",
+    "error_log": "java.lang.IllegalStateException: result contract violated\n\tat com.example.bugscope.benchmark.v3.MossGate.execute(MossGate.java:9)",
+    "situation": "입력 \"50\", 기대 결과 45. 경계의 결과 검증이 실패했습니다.",
+    "expected_file": "src/main/java/com/example/bugscope/benchmark/v3/OnyxUnit.java",
+    "expected_symbol": "transform",
+    "actual_cause": "정수 비율 9/10이 0이 되어 결과가 사라진다.",
+    "expected_hops": 1,
+    "graph_path": [
+      "MossGate.execute",
+      "OnyxUnit.transform"
+    ],
+    "decoy_files": [
+      "src/main/java/com/example/bugscope/benchmark/v3/OnyxUnitReplica.java",
+      "src/main/java/com/example/bugscope/benchmark/v3/OnyxUnitShadow.java"
+    ],
+    "invocation": "new MossGate().execute(\"50\", 45)"
+  },
+  {
+    "case_id": "v3-06",
+    "difficulty": "hard",
+    "category": "two_hop_callee",
+    "title": "Boundary contract 06",
+    "error_log": "java.lang.IllegalStateException: result contract violated\n\tat com.example.bugscope.benchmark.v3.PearlGate.execute(PearlGate.java:9)",
+    "situation": "입력 \"abc\", 기대 결과 3. 경계의 결과 검증이 실패했습니다.",
+    "expected_file": "src/main/java/com/example/bugscope/benchmark/v3/ReedUnit.java",
+    "expected_symbol": "transform",
+    "actual_cause": "문자 수를 하나 적게 반환한다.",
+    "expected_hops": 2,
+    "graph_path": [
+      "PearlGate.execute",
+      "QuartzLink.forward",
+      "ReedUnit.transform"
+    ],
+    "decoy_files": [
+      "src/main/java/com/example/bugscope/benchmark/v3/ReedUnitReplica.java",
+      "src/main/java/com/example/bugscope/benchmark/v3/ReedUnitShadow.java"
+    ],
+    "invocation": "new PearlGate().execute(\"abc\", 3)"
+  },
+  {
+    "case_id": "v3-07",
+    "difficulty": "hard",
+    "category": "two_hop_callee",
+    "title": "Boundary contract 07",
+    "error_log": "java.lang.IllegalStateException: result contract violated\n\tat com.example.bugscope.benchmark.v3.SlateGate.execute(SlateGate.java:9)",
+    "situation": "입력 \"19\", 기대 결과 19. 경계의 결과 검증이 실패했습니다.",
+    "expected_file": "src/main/java/com/example/bugscope/benchmark/v3/UmberUnit.java",
+    "expected_symbol": "transform",
+    "actual_cause": "첫 글자만 변환하여 뒷자리를 잃는다.",
+    "expected_hops": 2,
+    "graph_path": [
+      "SlateGate.execute",
+      "ThymeLink.forward",
+      "UmberUnit.transform"
+    ],
+    "decoy_files": [
+      "src/main/java/com/example/bugscope/benchmark/v3/UmberUnitReplica.java",
+      "src/main/java/com/example/bugscope/benchmark/v3/UmberUnitShadow.java"
+    ],
+    "invocation": "new SlateGate().execute(\"19\", 19)"
+  },
+  {
+    "case_id": "v3-08",
+    "difficulty": "hard",
+    "category": "two_hop_callee",
+    "title": "Boundary contract 08",
+    "error_log": "java.lang.IllegalStateException: result contract violated\n\tat com.example.bugscope.benchmark.v3.ValeGate.execute(ValeGate.java:9)",
+    "situation": "입력 \"255\", 기대 결과 255. 경계의 결과 검증이 실패했습니다.",
+    "expected_file": "src/main/java/com/example/bugscope/benchmark/v3/XeniaUnit.java",
+    "expected_symbol": "transform",
+    "actual_cause": "signed byte 변환으로 양수가 음수가 된다.",
+    "expected_hops": 2,
+    "graph_path": [
+      "ValeGate.execute",
+      "WillowLink.forward",
+      "XeniaUnit.transform"
+    ],
+    "decoy_files": [
+      "src/main/java/com/example/bugscope/benchmark/v3/XeniaUnitReplica.java",
+      "src/main/java/com/example/bugscope/benchmark/v3/XeniaUnitShadow.java"
+    ],
+    "invocation": "new ValeGate().execute(\"255\", 255)"
+  },
+  {
+    "case_id": "v3-09",
+    "difficulty": "hard",
+    "category": "two_hop_callee",
+    "title": "Boundary contract 09",
+    "error_log": "java.lang.IllegalStateException: result contract violated\n\tat com.example.bugscope.benchmark.v3.YarrowGate.execute(YarrowGate.java:9)",
+    "situation": "입력 \"199\", 기대 결과 2. 경계의 결과 검증이 실패했습니다.",
+    "expected_file": "src/main/java/com/example/bugscope/benchmark/v3/AmberUnit.java",
+    "expected_symbol": "transform",
+    "actual_cause": "올림해야 하는 묶음 수를 정수 나눗셈으로 버린다.",
+    "expected_hops": 2,
+    "graph_path": [
+      "YarrowGate.execute",
+      "ZincLink.forward",
+      "AmberUnit.transform"
+    ],
+    "decoy_files": [
+      "src/main/java/com/example/bugscope/benchmark/v3/AmberUnitReplica.java",
+      "src/main/java/com/example/bugscope/benchmark/v3/AmberUnitShadow.java"
+    ],
+    "invocation": "new YarrowGate().execute(\"199\", 2)"
+  },
+  {
+    "case_id": "v3-10",
+    "difficulty": "hard",
+    "category": "two_hop_callee",
+    "title": "Boundary contract 10",
+    "error_log": "java.lang.IllegalStateException: result contract violated\n\tat com.example.bugscope.benchmark.v3.BerylGate.execute(BerylGate.java:9)",
+    "situation": "입력 \"50\", 기대 결과 45. 경계의 결과 검증이 실패했습니다.",
+    "expected_file": "src/main/java/com/example/bugscope/benchmark/v3/DriftUnit.java",
+    "expected_symbol": "transform",
+    "actual_cause": "정수 비율 9/10이 0이 되어 결과가 사라진다.",
+    "expected_hops": 2,
+    "graph_path": [
+      "BerylGate.execute",
+      "CoralLink.forward",
+      "DriftUnit.transform"
+    ],
+    "decoy_files": [
+      "src/main/java/com/example/bugscope/benchmark/v3/DriftUnitReplica.java",
+      "src/main/java/com/example/bugscope/benchmark/v3/DriftUnitShadow.java"
+    ],
+    "invocation": "new BerylGate().execute(\"50\", 45)"
+  },
+  {
+    "case_id": "v3-11",
+    "difficulty": "medium",
+    "category": "control",
+    "title": "Semantic control 1",
+    "error_log": "Observed behavior: Expired cache entries disappear before the configured time to live.",
+    "situation": "재현 가능한 동작 오류이며 애플리케이션 stack trace는 없습니다.",
+    "expected_file": "src/main/java/com/example/bugscope/benchmark/v3/EpochStore.java",
+    "expected_symbol": "lookup",
+    "actual_cause": "캐시 조회가 저장 여부와 무관하게 null을 반환한다.",
+    "expected_hops": null,
+    "graph_path": [],
+    "decoy_files": []
+  },
+  {
+    "case_id": "v3-12",
+    "difficulty": "medium",
+    "category": "control",
+    "title": "Semantic control 2",
+    "error_log": "Observed behavior: Invoice net amount increases when tax is deducted from gross.",
+    "situation": "재현 가능한 동작 오류이며 애플리케이션 stack trace는 없습니다.",
+    "expected_file": "src/main/java/com/example/bugscope/benchmark/v3/LedgerMath.java",
+    "expected_symbol": "derive",
+    "actual_cause": "세금을 빼야 하지만 더한다.",
+    "expected_hops": null,
+    "graph_path": [],
+    "decoy_files": []
+  },
+  {
+    "case_id": "v3-13",
+    "difficulty": "medium",
+    "category": "control",
+    "title": "Semantic control 3",
+    "error_log": "Observed behavior: The first page of a one-based paginated list skips the first batch of rows.",
+    "situation": "재현 가능한 동작 오류이며 애플리케이션 stack trace는 없습니다.",
+    "expected_file": "src/main/java/com/example/bugscope/benchmark/v3/PageWindow.java",
+    "expected_symbol": "offset",
+    "actual_cause": "1-based 페이지에 page * size를 써 첫 묶음을 건너뛴다.",
+    "expected_hops": null,
+    "graph_path": [],
+    "decoy_files": []
+  },
+  {
+    "case_id": "v3-14",
+    "difficulty": "medium",
+    "category": "control",
+    "title": "Semantic control 4",
+    "error_log": "Observed behavior: Timeout duration in milliseconds is one thousand times too short after converting seconds.",
+    "situation": "재현 가능한 동작 오류이며 애플리케이션 stack trace는 없습니다.",
+    "expected_file": "src/main/java/com/example/bugscope/benchmark/v3/ClockScale.java",
+    "expected_symbol": "scaleMillis",
+    "actual_cause": "초를 밀리초로 변환할 때 1000을 곱하지 않는다.",
+    "expected_hops": null,
+    "graph_path": [],
+    "decoy_files": []
+  },
+  {
+    "case_id": "v3-15",
+    "difficulty": "medium",
+    "category": "control",
+    "title": "Semantic control 5",
+    "error_log": "Observed behavior: An adult exactly eighteen years old is rejected by the inclusive minimum age check.",
+    "situation": "재현 가능한 동작 오류이며 애플리케이션 stack trace는 없습니다.",
+    "expected_file": "src/main/java/com/example/bugscope/benchmark/v3/RangeRule.java",
+    "expected_symbol": "isEligible",
+    "actual_cause": "18 이상 조건에 >를 사용한다.",
+    "expected_hops": null,
+    "graph_path": [],
+    "decoy_files": []
+  }
+]
