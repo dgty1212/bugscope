@@ -127,7 +127,7 @@ def test_real_graph_distance_and_current_selector(graph, monkeypatch, case):
         5,
     )
     sources = [c.context_type for c in contexts if c.source_id == target.id]
-    assert sources == (["callee"] if case["category"] == "direct_callee" else [])
+    assert sources == (["callee"] if case["category"] != "control" else [])
 
 
 def test_runner_rejects_foreign_evaluation():

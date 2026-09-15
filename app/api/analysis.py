@@ -75,6 +75,11 @@ def build_analysis_contexts(
             start_line=context.start_line,
             end_line=context.end_line,
             score=context.score,
+            hop_depth=context.hop_depth,
+            trace_origin=context.trace_origin,
+            call_path=list(context.call_path),
+            selection_reason=context.selection_reason,
+            traversal_direction=context.traversal_direction,
         )
         for context_id, context in enumerate(
             contexts,
@@ -100,6 +105,11 @@ def serialize_contexts(
             "start_line": context.start_line,
             "end_line": context.end_line,
             "score": context.score,
+            "hop_depth": context.hop_depth,
+            "trace_origin": context.trace_origin,
+            "call_path": list(context.call_path),
+            "selection_reason": context.selection_reason,
+            "traversal_direction": context.traversal_direction,
         }
         for context_id, context in enumerate(
             contexts,
@@ -175,7 +185,8 @@ def analyze_project_error(
             # 내부에는 이제 selected context metadata를 저장한다.
             retrieved_chunks=stored_contexts,
 
-            analysis_result=result.analysis.model_dump(),
+            analysis_result={**result.analysis.model_dump(),
+                             "_context_selection": result.selection_report},
         )
 
     except DebugCaseSaveError as error:
@@ -191,4 +202,5 @@ def analyze_project_error(
         retrieval_query=result.retrieval_query,
         contexts=analysis_contexts,
         analysis=result.analysis,
+        selection_report=result.selection_report,
     )

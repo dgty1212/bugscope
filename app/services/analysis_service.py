@@ -1,14 +1,15 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from sqlalchemy.orm import Session
 
-from app.schemas.analysis import DebugAnalysisResult
+from app.schemas.analysis import AnalysisContext, DebugAnalysisResult
 from app.services import llm_service, retrieval_service
 from app.services.context_selector import (
     SelectedContext,
     search_hits_to_contexts,
     select_debug_context,
 )
+from app.services.selection_audit import SelectionAudit
 
 
 @dataclass(frozen=True, slots=True)
@@ -18,6 +19,7 @@ class DebugAnalysisPipelineResult:
     retrieval_query: str
     contexts: list[SelectedContext]
     analysis: DebugAnalysisResult
+    selection_report: dict = field(default_factory=dict)
 
 
 def build_retrieval_query(
@@ -51,6 +53,7 @@ def retrieve_analysis_contexts(
     retrieval_query: str,
     retrieval_mode: str,
     top_k: int,
+    audit: SelectionAudit | None = None,
 ) -> list[SelectedContext]:
     """
     retrieval_mode에 따라 LLM 분석에 사용할
@@ -91,6 +94,7 @@ def retrieve_analysis_contexts(
             error_log=error_log,
             retrieval_query=retrieval_query,
             max_contexts=top_k,
+            audit=audit,
         )
 
     raise ValueError(
@@ -214,6 +218,7 @@ def analyze_debug_case(
         situation=situation,
     )
 
+    audit = SelectionAudit(policy="balanced" if retrieval_mode == "structural" else retrieval_mode)
     contexts = retrieve_analysis_contexts(
         db=db,
         project_id=project_id,
@@ -221,7 +226,11 @@ def analyze_debug_case(
         retrieval_query=retrieval_query,
         retrieval_mode=retrieval_mode,
         top_k=top_k,
+        audit=audit,
     )
+    if retrieval_mode != "structural":
+        audit.begin([], [], [], [], contexts)
+        contexts = audit.finish(contexts, top_k)
 
     llm_prompt = build_llm_prompt(
         error_log=error_log,
@@ -237,9 +246,9 @@ def analyze_debug_case(
         retrieval_query=retrieval_query,
         contexts=contexts,
         analysis=analysis,
+        selection_report=audit.report,
     )
     
-from app.schemas.analysis import AnalysisContext
 
 
 def build_analysis_contexts(
@@ -257,6 +266,11 @@ def build_analysis_contexts(
             start_line=context.start_line,
             end_line=context.end_line,
             score=context.score,
+            hop_depth=context.hop_depth,
+            trace_origin=context.trace_origin,
+            call_path=list(context.call_path),
+            selection_reason=context.selection_reason,
+            traversal_direction=context.traversal_direction,
         )
         for context_id, context in enumerate(
             contexts,

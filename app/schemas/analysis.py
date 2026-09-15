@@ -111,6 +111,11 @@ class AnalysisContext(BaseModel):
     end_line: int
 
     score: float | None = None
+    hop_depth: int | None = None
+    trace_origin: dict | None = None
+    call_path: list[dict] = Field(default_factory=list)
+    selection_reason: str | None = None
+    traversal_direction: str | None = None
     
 class DebugAnalysisResponse(BaseModel):
     debug_case_id: int
@@ -123,4 +128,5 @@ class DebugAnalysisResponse(BaseModel):
     contexts: list[AnalysisContext]
 
     analysis: DebugAnalysisResult
+    selection_report: dict = Field(default_factory=dict)
     

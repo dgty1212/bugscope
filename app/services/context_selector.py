@@ -8,6 +8,7 @@ from app.services.retrieval_service import (
     SearchHit,
     search_code_chunks_hybrid,
 )
+from app.services.selection_audit import SelectionAudit
 from app.services.stack_trace_parser import parse_stack_trace
 from app.services.symbol_index_service import (
     find_symbol_for_stack_frame,
@@ -47,6 +48,11 @@ class SelectedContext:
     content: str
 
     score: float | None = None
+    hop_depth: int | None = None
+    trace_origin: dict | None = None
+    call_path: tuple[dict, ...] = ()
+    selection_reason: str | None = None
+    traversal_direction: str | None = None
 
 
 def symbol_to_context(
@@ -141,7 +147,7 @@ def append_context_if_unique(
     return True
 
 
-def select_debug_context(
+def select_debug_context_breadth_first(
     db: Session,
     project_id: int,
     error_log: str,
@@ -212,28 +218,31 @@ def select_debug_context(
 
     # -------------------------------------------------
     # 2. CALLEE
-    # Trace 함수가 직접 호출하는 함수
+    # Trace 함수에서 최대 2-hop까지 호출하는 함수
     # -------------------------------------------------
-    for symbol in trace_symbols:
-        callees = get_callees(
-            db=db,
-            symbol_id=symbol.id,
-        )
-
-        for callee in callees:
-            context = symbol_to_context(
-                symbol=callee,
-                context_type="callee",
-            )
-
-            append_context_if_unique(
-                selected=selected,
-                selected_keys=selected_keys,
-                context=context,
-            )
-
-            if len(selected) >= max_contexts:
-                return selected
+    # Breadth-first expansion: all direct callees before any second-hop callee.
+    # Seed with every trace ID to avoid cycles and expanding a trace twice.
+    frontier = trace_symbols
+    visited_ids = {symbol.id for symbol in trace_symbols}
+    for _depth in range(2):
+        next_frontier: list[CodeSymbol] = []
+        for symbol in frontier:
+            for callee in get_callees(db=db, symbol_id=symbol.id):
+                if callee.id in visited_ids:
+                    continue
+                visited_ids.add(callee.id)
+                next_frontier.append(callee)
+                context = symbol_to_context(symbol=callee, context_type="callee")
+                append_context_if_unique(
+                    selected=selected,
+                    selected_keys=selected_keys,
+                    context=context,
+                )
+                if len(selected) >= max_contexts:
+                    return selected
+        if not next_frontier:
+            break
+        frontier = next_frontier
 
     # -------------------------------------------------
     # 3. CALLER
@@ -300,3 +309,82 @@ def select_debug_context(
             break
 
     return selected
+
+
+def select_debug_context(
+    db: Session,
+    project_id: int,
+    error_log: str,
+    retrieval_query: str,
+    max_contexts: int = 8,
+    budget_policy: Literal["balanced", "breadth_first"] = "balanced",
+    audit: SelectionAudit | None = None,
+) -> list[SelectedContext]:
+    """Collect depth-2 graph candidates, then arbitrate a fixed context budget."""
+    from app.services.context_budget import allocate_context_budget
+
+    audit = audit if audit is not None else SelectionAudit(policy=budget_policy)
+    if budget_policy == "breadth_first":
+        return select_debug_context_breadth_first(
+            db, project_id, error_log, retrieval_query, max_contexts
+        )
+    if budget_policy != "balanced":
+        raise ValueError("Unknown context budget policy")
+    if max_contexts <= 0:
+        audit.begin([], [], [], [], [])
+        return audit.finish([], max_contexts)
+    trace_symbols: list[CodeSymbol] = []
+    visited = set()
+    for frame in parse_stack_trace(error_log).frames:
+        symbol = find_symbol_for_stack_frame(db=db, project_id=project_id, frame=frame)
+        if symbol is not None and symbol.id not in visited:
+            trace_symbols.append(symbol)
+            visited.add(symbol.id)
+            audit.trace(symbol)
+        if len(trace_symbols) >= max_contexts:
+            chosen = [symbol_to_context(s, "trace") for s in trace_symbols]
+            audit.begin(chosen, [], [], [], [])
+            return audit.finish(chosen, max_contexts)
+    direct_symbols: list[CodeSymbol] = []
+    second_symbols: list[CodeSymbol] = []
+    for source in trace_symbols:
+        for target in get_callees(db=db, symbol_id=source.id):
+            if target.id not in visited:
+                visited.add(target.id)
+                direct_symbols.append(target)
+                audit.callee(source, target)
+            else:
+                audit.skip(target)
+    for source in direct_symbols:
+        for target in get_callees(db=db, symbol_id=source.id):
+            if target.id not in visited:
+                visited.add(target.id)
+                second_symbols.append(target)
+                audit.callee(source, target)
+            else:
+                audit.skip(target)
+    caller_symbols: list[CodeSymbol] = []
+    for source in trace_symbols:
+        for target in get_callers(db=db, symbol_id=source.id):
+            if target.id not in visited:
+                visited.add(target.id)
+                caller_symbols.append(target)
+                audit.caller(source, target)
+            else:
+                audit.skip(target)
+    graph_size = len(direct_symbols) + len(second_symbols) + len(caller_symbols)
+    remaining = max_contexts - len(trace_symbols)
+    # Use legacy candidate count without pressure; more evidence when crowded.
+    candidate_k = max(max(0, remaining - graph_size) * 3, max_contexts)
+    if graph_size >= remaining:
+        candidate_k = max_contexts * 3
+    semantic = search_hits_to_contexts(search_code_chunks_hybrid(
+        db=db, project_id=project_id, query=retrieval_query, top_k=candidate_k,
+    ))
+    return allocate_context_budget(
+        [symbol_to_context(s, "trace") for s in trace_symbols],
+        [symbol_to_context(s, "callee") for s in direct_symbols],
+        [symbol_to_context(s, "callee") for s in second_symbols],
+        [symbol_to_context(s, "caller") for s in caller_symbols],
+        semantic, max_contexts, audit=audit,
+    )
